@@ -41,7 +41,20 @@ GEMINI_MODELS = [
 # ---------------------------------------------------------------------------
 
 def run(cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        shell=False
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Comando falló:\n{cmd}\n\nSTDERR:\n{result.stderr}"
+        )
+
     return result.stdout.strip()
 
 def map_file_to_package(filepath):
@@ -83,7 +96,7 @@ def merge_stats(target, source):
 # ---------------------------------------------------------------------------
 
 def get_sorted_tags():
-    output = run("git tag --sort=creatordate")
+    output = run(["git", "tag", "--sort=creatordate"])
     return [t for t in output.split('\n') if t.strip()]
 
 def get_git_stats(commit_range, collect_diffs=False):
@@ -96,7 +109,9 @@ def get_git_stats(commit_range, collect_diffs=False):
         return by_email[email]
 
     # Recolectar commits y nombres
-    log_cmd = f"git log --no-merges --format=%an|||%ae|||%s {commit_range}"
+    
+
+    log_cmd = ["git", "log", "--no-merges", "--format=%an|||%ae|||%s", commit_range]
     for line in run(log_cmd).split('\n'):
         parts = line.split('|||', 2)
         if len(parts) == 3:
@@ -107,7 +122,7 @@ def get_git_stats(commit_range, collect_diffs=False):
                     ensure(email)['commits'].append(message)
 
     # Recolectar líneas modificadas (y opcionalmente diffs)
-    numstat_cmd = f"git log --no-merges --numstat --format=COMMIT|||%ae|||%H {commit_range}"
+    numstat_cmd = ["git", "log", "--no-merges", "--numstat", "--format=COMMIT|||%ae|||%H", commit_range]
     current_email = None
     for line in run(numstat_cmd).split('\n'):
         if line.startswith('COMMIT|||'):
@@ -116,7 +131,7 @@ def get_git_stats(commit_range, collect_diffs=False):
                 current_email, commit_hash = parts[1], parts[2]
                 entry = ensure(current_email)
                 if collect_diffs and len(entry['diff_summary']) < 15:
-                    diff = run(f"git show --format='' --stat --patch {commit_hash}")
+                    diff = run(["git", "show", "--format=", "--stat", "--patch", commit_hash])
                     entry['diff_summary'].append(diff[:1500])
         elif line and current_email and '\t' in line:
             parts = line.split('\t', 2)
@@ -305,7 +320,7 @@ def main():
                         help='Activa el análisis de integridad con Gemini (requiere API Key configurada).')
     args = parser.parse_args()
 
-    raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run("git config --get epers.ai-keys")
+    raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run(["git", "config", "--get", "epers.ai-keys"])
     api_keys = [k.strip() for k in raw.split(',') if k.strip()]
 
     if args.ai and not api_keys:
@@ -328,7 +343,7 @@ def main():
     print(f"Analizando {period}...")
     stats = get_git_stats(commit_range, collect_diffs=args.ai)
 
-    repo_name = os.path.basename(run("git rev-parse --show-toplevel"))
+    repo_name = os.path.basename(run(["git", "rev-parse", "--show-toplevel"]))
     run_date = datetime.now().strftime('%Y-%m-%d')
     md = generate_markdown(repo_name, run_date, period, stats, ai_enabled=args.ai, ai_keys=api_keys)
 
