@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""
-EPERS Tag Statistics Generator - LOCAL TEACHER EDITION (V3.6)
-Audit tool for instructors. Generates a PRIVATE local report with AI analysis.
-"""
-
 import subprocess
 import os
 import re
+import unicodedata
 import json
 import argparse
 import urllib.request
 import urllib.error
-import random
 from collections import defaultdict
 from datetime import datetime
 
@@ -60,7 +55,8 @@ def make_bar(percentage, width=10):
     return '▓' * filled + '░' * (width - filled)
 
 def make_anchor(name):
-    return re.sub(r'[^\w\s-]', '', name.lower()).strip().replace(' ', '-')
+    normalized = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    return re.sub(r'[^\w\s-]', '', normalized.lower()).strip().replace(' ', '-')
 
 def empty_author_entry():
     return {
@@ -76,6 +72,7 @@ def merge_stats(target, source):
     target['deleted'] += source['deleted']
     target['commits'].extend(source['commits'])
     target['diff_summary'].extend(source['diff_summary'])
+    target['diff_summary'] = target['diff_summary'][:15]
     for p in PACKAGES:
         target['packages'][p]['added'] += source['packages'][p]['added']
         target['packages'][p]['deleted'] += source['packages'][p]['deleted']
@@ -99,7 +96,7 @@ def get_git_stats(commit_range, collect_diffs=False):
         return by_email[email]
 
     # Recolectar commits y nombres
-    log_cmd = f"git log --no-merges --format='%an|||%ae|||%s' {commit_range}"
+    log_cmd = f"git log --no-merges --format=%an|||%ae|||%s {commit_range}"
     for line in run(log_cmd).split('\n'):
         parts = line.split('|||', 2)
         if len(parts) == 3:
@@ -110,7 +107,7 @@ def get_git_stats(commit_range, collect_diffs=False):
                     ensure(email)['commits'].append(message)
 
     # Recolectar líneas modificadas (y opcionalmente diffs)
-    numstat_cmd = f"git log --no-merges --numstat --format='COMMIT|||%ae|||%H' {commit_range}"
+    numstat_cmd = f"git log --no-merges --numstat --format=COMMIT|||%ae|||%H {commit_range}"
     current_email = None
     for line in run(numstat_cmd).split('\n'):
         if line.startswith('COMMIT|||'):
@@ -219,7 +216,7 @@ def analyze_participation_with_ai(author, commits, diff_summaries, api_keys, tea
     if not api_keys:
         return "**[IA] Error: Sin API Key.**"
 
-    key = re.sub(r'[^a-zA-Z0-9_\-]', '', random.choice(api_keys))
+    key = re.sub(r'[^a-zA-Z0-9_\-]', '', api_keys[0])
     prompt = build_prompt(author, commits, diff_summaries, team_package_stats)
 
     for ver, mod in GEMINI_MODELS:
@@ -298,35 +295,45 @@ def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_k
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(description='Auditoría de participación Git con análisis de IA (EPERS).')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-h', '--head', action='store_true')
-    group.add_argument('-t', '--tag', action='store_true')
-    parser.add_argument('--ai', action='store_true')
+    group.add_argument('-H', '--tag-to-head', action='store_true',
+                       help='Analiza desde el último tag hasta HEAD. Ideal para entregas parciales.')
+    group.add_argument('-T', '--tag-to-tag', action='store_true',
+                       help='Analiza entre los últimos dos tags. Ideal para entregas finales.')
+    parser.add_argument('--ai', action='store_true',
+                        help='Activa el análisis de integridad con Gemini (requiere API Key configurada).')
     args = parser.parse_args()
 
     raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run("git config --get epers.ai-keys")
     api_keys = [k.strip() for k in raw.split(',') if k.strip()]
 
+    if args.ai and not api_keys:
+        raise SystemExit(
+            "Error: --ai requiere una API Key de Gemini.\n"
+            "Configurala con: git config --global epers.ai-keys \"TU_CLAVE\"\n"
+            "O definí la variable de entorno: EPERS_STATS_AI_KEYS=\"TU_CLAVE\""
+        )
+
     tags = get_sorted_tags()
-    if args.head:
+    if args.tag_to_head:
         if not tags:
-            raise SystemExit("No hay tags.")
+            raise SystemExit("Error: no se encontraron tags en este repositorio.")
         commit_range, period = f"{tags[-1]}..HEAD", f"{tags[-1]} → HEAD"
     else:
         if len(tags) < 2:
-            raise SystemExit("Faltan tags.")
+            raise SystemExit("Error: se necesitan al menos dos tags para el modo tag-to-tag.")
         commit_range, period = f"{tags[-2]}..{tags[-1]}", f"{tags[-2]} → {tags[-1]}"
 
     print(f"Analizando {period}...")
     stats = get_git_stats(commit_range, collect_diffs=args.ai)
 
-    repo_name = run("basename $(git rev-parse --show-toplevel)")
+    repo_name = os.path.basename(run("git rev-parse --show-toplevel"))
     run_date = datetime.now().strftime('%Y-%m-%d')
     md = generate_markdown(repo_name, run_date, period, stats, ai_enabled=args.ai, ai_keys=api_keys)
 
     filename = f"{repo_name}-stats-{run_date}.md"
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         f.write(md)
     print(f"[OK] Reporte generado: {filename}")
 
