@@ -2,7 +2,6 @@
 import subprocess
 import os
 import re
-import unicodedata
 import json
 import argparse
 import urllib.request
@@ -68,8 +67,7 @@ def make_bar(percentage, width=10):
     return '▓' * filled + '░' * (width - filled)
 
 def make_anchor(name):
-    normalized = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
-    return re.sub(r'[^\w\s-]', '', normalized.lower()).strip().replace(' ', '-')
+    return re.sub(r'[^\w\s-]', '', name.lower()).strip().replace(' ', '-')
 
 def empty_author_entry():
     return {
@@ -79,6 +77,13 @@ def empty_author_entry():
         'commits': [],
         'diff_summary': [],
     }
+
+def same_person(a, b):
+    if a.lower().replace(' ', '') == b.lower().replace(' ', ''):
+        return True
+    a_tokens = set(a.lower().split())
+    b_tokens = set(b.lower().split())
+    return a_tokens <= b_tokens or b_tokens <= a_tokens
 
 def merge_stats(target, source):
     target['added'] += source['added']
@@ -109,8 +114,6 @@ def get_git_stats(commit_range, collect_diffs=False):
         return by_email[email]
 
     # Recolectar commits y nombres
-    
-
     log_cmd = ["git", "log", "--no-merges", "--format=%an|||%ae|||%s", commit_range]
     for line in run(log_cmd).split('\n'):
         parts = line.split('|||', 2)
@@ -156,13 +159,10 @@ def get_git_stats(commit_range, collect_diffs=False):
         else:
             merge_stats(raw_stats[canonical], data)
 
-    # Unificar nombres parcialmente iguales (ej: "Juan" y "Juan Pérez")
+    # Unificar nombres parcialmente iguales (ej: "Juan" y "Juan Pérez", "francogarcino" y "Franco Garcino")
     final_stats = {}
     for name in sorted(raw_stats.keys(), key=len, reverse=True):
-        match = next(
-            (t for t in final_stats if name.lower() in t.lower() or t.lower() in name.lower()),
-            None
-        )
+        match = next((t for t in final_stats if same_person(name, t)), None)
         if match:
             merge_stats(final_stats[match], raw_stats[name])
         else:
@@ -320,15 +320,19 @@ def main():
                         help='Activa el análisis de integridad con Gemini (requiere API Key configurada).')
     args = parser.parse_args()
 
-    raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run(["git", "config", "--get", "epers.ai-keys"])
-    api_keys = [k.strip() for k in raw.split(',') if k.strip()]
-
-    if args.ai and not api_keys:
-        raise SystemExit(
-            "Error: --ai requiere una API Key de Gemini.\n"
-            "Configurala con: git config --global epers.ai-keys \"TU_CLAVE\"\n"
-            "O definí la variable de entorno: EPERS_STATS_AI_KEYS=\"TU_CLAVE\""
-        )
+    api_keys = []
+    if args.ai:
+        try:
+            raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run(["git", "config", "--get", "epers.ai-keys"])
+        except RuntimeError:
+            raw = ''
+        api_keys = [k.strip() for k in raw.split(',') if k.strip()]
+        if not api_keys:
+            raise SystemExit(
+                "Error: --ai requiere una API Key de Gemini.\n"
+                "Configurala con: git config --global epers.ai-keys \"TU_CLAVE\"\n"
+                "O definí la variable de entorno: EPERS_STATS_AI_KEYS=\"TU_CLAVE\""
+            )
 
     tags = get_sorted_tags()
     if args.tag_to_head:
