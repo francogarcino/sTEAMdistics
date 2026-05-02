@@ -41,11 +41,11 @@ jobs:
 
       - name: Configurar API key
         run: |
-          git config --global epers.ai-keys "${{ secrets.ANTHROPIC_API_KEY }}"
+          git config --global sTEAMdistics.ai-keys "${{ secrets.AI_API_KEY }}"
 
       - name: Correr script
         run: |
-          python3 generate_stats_ia.py -T --ia
+          python3 generate_stats_ai.py -t --ia
 
       - name: Checkout repo de análisis
         uses: actions/checkout@v4

@@ -2,7 +2,7 @@
 
 ## Prerequisitos
 
-- Tener el script `generate_stats_ia.py` en la raíz del repo del equipo
+- Tener el script `generate_stats_ai.py` en la raíz del repo del equipo
 - Tener un repo privado de análisis creado con al menos un commit (ej: un `README.md`)
 
 ---
@@ -25,7 +25,7 @@ Ir a **Settings → Secrets and variables → Actions** del repo del equipo.
 
 | Nombre | Valor |
 |--------|-------|
-| `ANTHROPIC_API_KEY` | Tu clave de Anthropic |
+| `AI_API_KEY` | Tu clave de API (Gemini/Anthropic/etc) |
 | `ANALISIS_REPO_TOKEN` | El PAT creado en el paso anterior |
 
 ### Variables
@@ -54,7 +54,7 @@ Verificar en **Actions** del repo del equipo que el workflow corra. Si todo va b
 ```
 /2026
   /primer-cursada
-    /EPERStanos
+    /repo-generico
       v0.1.md
 ```
 

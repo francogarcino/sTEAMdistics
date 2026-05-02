@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-EPERS Tag Statistics Generator - LOCAL TEACHER EDITION (V3.6)
-Audit tool for instructors. Generates a PRIVATE local report with AI analysis.
+sTEAMdistics - Generador de Estadísticas de Tags
+Herramienta de auditoría para docentes. Genera un reporte local PRIVADO con análisis de IA.
 """
 
 import subprocess
@@ -275,9 +275,9 @@ def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_k
     team_package_stats = {a: stats[a]['packages'] for a in authors}
 
     sections = [
-        f"# [EPERS] Reporte Docente: {repo_name}",
+        f"# Reporte de Participación: {repo_name}",
         f"Fecha: {run_date} | Periodo: {period}",
-        "> **CONFIDENCIAL:** Auditoría interna de cátedra.\n",
+        "> **CONFIDENCIAL:** Auditoría técnica de contribuciones.\n",
         "---\n",
         render_summary_table(authors, stats),
         "\n## Detalle Individual\n",
@@ -305,7 +305,7 @@ def main():
     parser.add_argument('--ai', action='store_true')
     args = parser.parse_args()
 
-    raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run("git config --get epers.ai-keys")
+    raw = os.environ.get('STEAM_AI_KEYS', '') or run("git config --get sTEAMdistics.ai-keys")
     api_keys = [k.strip() for k in raw.split(',') if k.strip()]
 
     tags = get_sorted_tags()
