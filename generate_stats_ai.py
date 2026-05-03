@@ -315,7 +315,7 @@ def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_k
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description='Auditoría de participación Git con análisis de IA (EPERS).')
+    parser = argparse.ArgumentParser(description='Auditoría de participación Git con análisis de IA.')
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-H', '--tag-to-head', action='store_true',
                        help='Analiza desde el último tag hasta HEAD. Ideal para entregas parciales.')
@@ -328,15 +328,15 @@ def main():
     api_keys = []
     if args.ai:
         try:
-            raw = os.environ.get('EPERS_STATS_AI_KEYS', '') or run(["git", "config", "--get", "epers.ai-keys"])
+            raw = os.environ.get('STEAM_AI_KEYS', '') or run(["git", "config", "--get", "sTEAMdistics.ai-keys"])
         except RuntimeError:
             raw = ''
         api_keys = [k.strip() for k in raw.split(',') if k.strip()]
         if not api_keys:
             raise SystemExit(
                 "Error: --ai requiere una API Key de Gemini.\n"
-                "Configurala con: git config --global epers.ai-keys \"TU_CLAVE\"\n"
-                "O definí la variable de entorno: EPERS_STATS_AI_KEYS=\"TU_CLAVE\""
+                "Configurala con: git config --global sTEAMdistics.ai-keys \"TU_CLAVE\"\n"
+                "O definí la variable de entorno: STEAM_AI_KEYS=\"TU_CLAVE\""
             )
 
     tags = get_sorted_tags()
