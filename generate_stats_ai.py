@@ -328,7 +328,7 @@ def main():
     api_keys = []
     if args.ai:
         try:
-            raw = os.environ.get('STEAM_AI_KEYS', '') or run(["git", "config", "--get", "sTEAMdistics.ai-keys"])
+            raw = os.environ.get('STEAMDISTICS_AI_KEYS', '') or run(["git", "config", "--get", "sTEAMdistics.ai-keys"])
         except RuntimeError:
             raw = ''
         api_keys = [k.strip() for k in raw.split(',') if k.strip()]
@@ -336,7 +336,7 @@ def main():
             raise SystemExit(
                 "Error: --ai requiere una API Key de Gemini.\n"
                 "Configurala con: git config --global sTEAMdistics.ai-keys \"TU_CLAVE\"\n"
-                "O definí la variable de entorno: STEAM_AI_KEYS=\"TU_CLAVE\""
+                "O definí la variable de entorno: STEAMDISTICS_AI_KEYS=\"TU_CLAVE\""
             )
 
     tags = get_sorted_tags()

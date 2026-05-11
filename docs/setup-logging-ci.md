@@ -1,88 +1,47 @@
-# Setup: CI de Resumen de Participación
+# Configuración de Logging de Contribuciones en CI
 
-## Prerequisitos
+Este documento detalla cómo configurar la automatización para que, cada vez que un alumno (o docente) cree un **tag** en este repositorio, se genere un reporte de participación por IA y se envíe automáticamente a un repositorio centralizado de auditoría.
 
-- Tener el script `generate_stats_ai.py` en la raíz del repo del equipo
-- Tener un repo privado de análisis creado con al menos un commit (ej: un `README.md`)
+## 1. Configuración de Secretos y Variables en GitHub
 
----
+Para que el Workflow de GitHub Actions funcione, debes configurar los siguientes elementos en **Settings > Secrets and variables > Actions** del repositorio:
 
-## 1. Crear el Personal Access Token (PAT)
-
-1. GitHub → tu avatar → **Settings**
-2. **Developer settings** → **Personal access tokens** → **Tokens (classic)**
-3. **Generate new token**
-4. Scope mínimo: `repo`
-5. Copiarlo — no se vuelve a mostrar
+### Secretos (Secrets)
+| Nombre | Descripción | Ejemplo |
+| :--- | :--- | :--- |
+| `AI_API_KEY` | Tu clave de API de Google Gemini. | `AIzaSy...` |
+| `ANALISIS_REPO_TOKEN` | Un **Personal Access Token (PAT)** con permisos de `repo` (escritura). | `ghp_...` |
+| `ANALISIS_REPO` | Path completo del repositorio de destino. | `francogarcino/repos-contributions-test` |
 
 ---
 
-## 2. Configurar secrets y variables en el repo del equipo
+## 2. Creación del Personal Access Token (PAT)
 
-Ir a **Settings → Secrets and variables → Actions** del repo del equipo.
-
-### Secrets
-
-| Nombre | Valor |
-|--------|-------|
-| `AI_API_KEY` | Tu clave de API (Gemini/Anthropic/etc) |
-| `ANALISIS_REPO_TOKEN` | El PAT creado en el paso anterior |
-
-### Variables
-
-| Nombre | Valor |
-|--------|-------|
-| `ANALISIS_REPO` | `tu-usuario/nombre-repo-privado` |
+Para que un repositorio pueda escribir en otro, GitHub requiere un token:
+1. Ve a **GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)**.
+2. Genera un nuevo token con el scope `repo`.
+3. Copia el token y pégalo como el secreto `ANALISIS_REPO_TOKEN` en este repositorio.
 
 ---
 
-## 3. Agregar el workflow
+## 3. Cómo Probar el Flujo
 
-Crear el archivo `.github/workflows/generar-resumen.yml` en el repo del equipo con el contenido del workflow.
+Una vez configurados los secretos y variables, puedes disparar la automatización siguiendo estos pasos:
 
----
-
-## 4. Probar
-
-```bash
-git tag v0.1
-git push origin v0.1
-```
-
-Verificar en **Actions** del repo del equipo que el workflow corra. Si todo va bien, el repo de análisis debería tener la estructura:
-
-```
-/2026
-  /primer-cursada
-    /repo-generico
-      v0.1.md
-```
+1.  **Asegúrate de tener al menos dos tags** en tu repositorio (ya que el script usa `-T` para comparar entre los últimos dos tags).
+2.  **Crea y sube un nuevo tag:**
+    ```bash
+    git tag -a v1.0.test -m "Prueba de CI"
+    git push origin v1.0.test
+    ```
+3.  **Verifica en GitHub Actions:** Entra a la pestaña **Actions** para ver el progreso del job "Generar resumen de participación".
+4.  **Verifica el destino:** Si el job finaliza correctamente, el reporte aparecerá en el repositorio definido en `ANALISIS_REPO` bajo una estructura de carpetas similar a:
+    `2026/primer-cursada/NombreDelRepo/v1.0.test.md`
 
 ---
 
-## Estructura del repo de análisis
+## 4. Notas Técnicas
 
-Los reportes se organizan automáticamente por año, cursada y equipo:
-
-```
-/2026
-  /primer-cursada        ← marzo a julio
-    /nombre-equipo
-      v1.0.md
-      v2.0.md
-  /segunda-cursada       ← agosto a diciembre
-    /nombre-equipo
-      v1.0.md
-/2025
-  ...
-```
-
-El nombre del equipo se infiere del nombre del repo, removiendo el sufijo `-TP` si existe.
-
----
-
-## Notas
-
-- El workflow se dispara con **cualquier tag**. Si se quiere filtrar, cambiar `'*'` en el trigger por un patrón como `'v*'`.
-- El repo del equipo puede ser público — los secrets nunca se exponen en los logs.
-- Si hay múltiples repos de equipos, repetir el paso 2 para cada uno. Si están en una organización, los secrets pueden configurarse a nivel org en **Organization Settings → Secrets and variables → Actions**.
+- El script utiliza la variable de entorno `STEAMDISTICS_AI_KEYS` dentro del contenedor de CI.
+- El workflow deduce automáticamente el nombre del equipo y el semestre basándose en la fecha actual y el nombre del repositorio.
+- El nombre del equipo se infiere del nombre del repo, removiendo el sufijo `-TP` si existe.

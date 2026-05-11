@@ -61,6 +61,11 @@ El script generará un archivo local con el nombre del repositorio y la fecha, p
     *   **Distribución vs. equipo:** Comparación de la participación en cada capa contra el resto del grupo, detectando si alguien se especializó en una sola capa en lugar de pasar por todas.
     *   **Patrón de refactors:** Detección de commits repetidos sobre los mismos archivos, evaluando si el alumno se trabó con una implementación o si infló artificialmente su actividad anterior.
 
+### 🚀 Automatización con GitHub Actions (CI)
+
+Este proyecto incluye un workflow para automatizar la auditoría en cada entrega (tag). Para configurarlo, consulta la guía de:
+👉 **[Setup de Logging en CI](docs/setup-logging-ci.md)**
+
 ---
 
 ### ⚠️ Notas Importantes para Docentes

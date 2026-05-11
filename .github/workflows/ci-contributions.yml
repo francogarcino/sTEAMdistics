@@ -51,7 +51,7 @@ jobs:
       - name: Checkout repo de análisis
         uses: actions/checkout@v4
         with:
-          repository: ${{ vars.ANALISIS_REPO }}
+          repository: ${{ secrets.ANALISIS_REPO }}
           token: ${{ secrets.ANALISIS_REPO_TOKEN }}
           path: analisis-repo
 
