@@ -26,7 +26,10 @@ git config --get epers.ai-keys
 ```
 > Si el comando anterior te devuelve tu clave, ¡ya estás listo!
 
-> **Tip:** Si quieres ir más rápido y evitar límites de velocidad, puedes poner varias claves separadas por coma: `"CLAVE1,CLAVE2,CLAVE3"`. El script las rotará automáticamente.
+> **Alternativa:** También podés exportar la clave como variable de entorno en lugar de usar git config:
+> ```bash
+> export EPERS_STATS_AI_KEYS="TU_CLAVE_AQUI"
+> ```
 
 ---
 
@@ -34,14 +37,14 @@ git config --get epers.ai-keys
 
 El script se debe ejecutar **dentro de la carpeta del proyecto del alumno**.
 
-#### Caso A: Analizar desde el último Tag hasta hoy (Ideal para entregas parciales)
+#### Caso A: Desde el último Tag hasta HEAD (Ideal para entregas parciales)
 ```bash
-python3 path/to/repos-epers/generate_stats_ai.py -h --ai
+python3 path/to/repos-epers/generate_stats_ai.py -H --ai
 ```
 
-#### Caso B: Analizar entre los últimos dos Tags (Ideal para entregas finales)
+#### Caso B: Entre los últimos dos Tags (Ideal para entregas finales)
 ```bash
-python3 path/to/repos-epers/generate_stats_ai.py -t --ai
+python3 path/to/repos-epers/generate_stats_ai.py -T --ai
 ```
 
 ---
@@ -64,4 +67,4 @@ El script generará un archivo local con el nombre del repositorio y la fecha, p
 
 *   **Privacidad:** El script **NO sube nada a GitHub**. El reporte es 100% local para que los alumnos no vean el análisis de la IA. No compartas el `.md` generado con ellos.
 *   **Aislamiento:** Esta configuración usa la clave `epers.ai-keys` de Git, por lo que no interfiere con ninguna otra configuración de Gemini que tengas en tu PC de trabajo.
-*   **Costo:** Usamos el modelo `gemini-1.5-flash` que es **gratuito** hasta un límite muy alto. No deberían tener problemas de costos.
+*   **Costo:** Usamos `gemini-2.5-flash` (con fallback a `gemini-2.0-flash` y `gemini-2.0-flash-lite`), todos **gratuitos** hasta un límite muy alto. No deberían tener problemas de costos.
