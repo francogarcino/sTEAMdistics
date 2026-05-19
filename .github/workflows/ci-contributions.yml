@@ -39,13 +39,17 @@ jobs:
           echo "year=$YEAR" >> $GITHUB_OUTPUT
           echo "semester=$SEMESTER" >> $GITHUB_OUTPUT
 
-      - name: Configurar API key
-        run: |
-          git config --global sTEAMdistics.ai-keys "${{ secrets.AI_API_KEY }}"
+      - name: Checkout sTEAMdistics
+        uses: actions/checkout@v4
+        with:
+          repository: francogarcino/sTEAMdistics
+          token: ${{ secrets.STEAMDISTICS_READ_TOKEN }}
+          path: std
 
       - name: Correr script
-        run: |
-          python3 generate_stats_ai.py -T --ai
+        env:
+          STEAMDISTICS_AI_KEYS: ${{ secrets.AI_API_KEY }}
+        run: python3 std/generate_stats_ai.py -T --ai
 
 
       - name: Checkout repo de análisis

@@ -1,47 +1,83 @@
-# Configuración de Logging de Contribuciones en CI
+# Configuración del CI de Auditoría de Contribuciones
 
-Este documento detalla cómo configurar la automatización para que, cada vez que un alumno (o docente) cree un **tag** en este repositorio, se genere un reporte de participación por IA y se envíe automáticamente a un repositorio centralizado de auditoría.
-
-## 1. Configuración de Secretos y Variables en GitHub
-
-Para que el Workflow de GitHub Actions funcione, debes configurar los siguientes elementos en **Settings > Secrets and variables > Actions** del repositorio:
-
-### Secretos (Secrets)
-| Nombre | Descripción | Ejemplo |
-| :--- | :--- | :--- |
-| `AI_API_KEY` | Tu clave de API de Google Gemini. | `AIzaSy...` |
-| `ANALISIS_REPO_TOKEN` | Un **Personal Access Token (PAT)** con permisos de `repo` (escritura). | `ghp_...` |
-| `ANALISIS_REPO` | Path completo del repositorio de destino. | `francogarcino/repos-contributions-test` |
+Cuando un equipo crea un tag en su repo, el CI genera automáticamente un reporte de participación con IA y lo sube al repo privado de análisis.
 
 ---
 
-## 2. Creación del Personal Access Token (PAT)
+## Paso 1 — Hacer privados los repos necesarios
 
-Para que un repositorio pueda escribir en otro, GitHub requiere un token:
-1. Ve a **GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)**.
-2. Genera un nuevo token con el scope `repo`.
-3. Copia el token y pégalo como el secreto `ANALISIS_REPO_TOKEN` en este repositorio.
+Antes de instalar el workflow en repos de alumnos:
 
----
-
-## 3. Cómo Probar el Flujo
-
-Una vez configurados los secretos y variables, puedes disparar la automatización siguiendo estos pasos:
-
-1.  **Asegúrate de tener al menos dos tags** en tu repositorio (ya que el script usa `-T` para comparar entre los últimos dos tags).
-2.  **Crea y sube un nuevo tag:**
-    ```bash
-    git tag -a v1.0.test -m "Prueba de CI"
-    git push origin v1.0.test
-    ```
-3.  **Verifica en GitHub Actions:** Entra a la pestaña **Actions** para ver el progreso del job "Generar resumen de participación".
-4.  **Verifica el destino:** Si el job finaliza correctamente, el reporte aparecerá en el repositorio definido en `ANALISIS_REPO` bajo una estructura de carpetas similar a:
-    `2026/primer-cursada/NombreDelRepo/v1.0.test.md`
+- **sTEAMdistics** debe ser **privado** (GitHub → Settings → Danger Zone → Change visibility). Así los alumnos no pueden ver el script de análisis.
+- **El repo de análisis** (donde van los reportes) también debe ser **privado**, accesible solo para docentes.
 
 ---
 
-## 4. Notas Técnicas
+## Paso 2 — Generar los tokens
 
-- El script utiliza la variable de entorno `STEAMDISTICS_AI_KEYS` dentro del contenedor de CI.
-- El workflow deduce automáticamente el nombre del equipo y el semestre basándose en la fecha actual y el nombre del repositorio.
-- El nombre del equipo se infiere del nombre del repo, removiendo el sufijo `-TP` si existe.
+### Token de lectura de sTEAMdistics (`STEAMDISTICS_READ_TOKEN`)
+
+Permite que el CI de cada repo de alumno descargue el script sin exponerlo.
+
+1. Ir a [GitHub Settings → Developer settings → Fine-grained tokens](https://github.com/settings/tokens?type=beta) → **Generate new token**
+2. Configurar:
+   - **Token name:** `steamdistics-ci-read`
+   - **Expiration:** 1 año
+   - **Repository access:** Only selected → elegir `sTEAMdistics`
+   - **Permissions → Contents:** Read-only
+3. Generar y copiar el token (`github_pat_...`). **Solo se muestra una vez.**
+
+### Token de escritura al repo de análisis (`ANALISIS_REPO_TOKEN`)
+
+Permite que el CI suba los reportes al repo privado.
+
+1. Mismo flujo de fine-grained tokens
+2. Configurar:
+   - **Token name:** `steamdistics-ci-write`
+   - **Expiration:** 1 año
+   - **Repository access:** Only selected → elegir el repo de análisis
+   - **Permissions → Contents:** Read and write
+3. Generar y copiar el token.
+
+---
+
+## Paso 3 — Instalar el workflow en cada repo de alumno
+
+### 3a. Agregar los secrets
+
+En el repo del alumno → **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Valor |
+| :--- | :--- |
+| `STEAMDISTICS_READ_TOKEN` | Token de lectura de sTEAMdistics (Paso 2) |
+| `AI_API_KEY` | Clave de API de Google Gemini (`AIzaSy...`) |
+| `ANALISIS_REPO_TOKEN` | Token de escritura al repo de análisis (Paso 2) |
+| `ANALISIS_REPO` | Path del repo de análisis (ej: `francogarcino/repos-contributions-test`) |
+
+### 3b. Agregar el workflow
+
+Copiar el archivo `.github/workflows/ci-contributions.yml` de este repo al repo del alumno, en la misma ruta. Sin modificaciones.
+
+---
+
+## Cómo probar el flujo
+
+1. Asegurarse de tener **al menos dos tags** en el repo de prueba (el script compara entre los dos últimos).
+2. Crear y pushear un nuevo tag:
+   ```bash
+   git tag -a v1.0 -m "Entrega 1"
+   git push origin v1.0
+   git tag -a v1.1 -m "Entrega 2"
+   git push origin v1.1
+   ```
+3. Verificar en **Actions** del repo que el job pasa todos los steps.
+4. Verificar que en el repo de análisis apareció el archivo bajo:
+   `{año}/{cursada}/{equipo}/v1.1.md`
+
+---
+
+## Notas
+
+- El nombre del equipo se infiere del nombre del repo quitando el sufijo `-TP`.
+- El semestre se deduce de la fecha: meses 3–7 → `primer-cursada`, resto → `segunda-cursada`.
+- El script nunca queda en el repo del alumno — se descarga en runtime y desaparece al terminar el job.
