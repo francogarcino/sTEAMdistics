@@ -1,75 +1,66 @@
-# 🤖 sTEAMdistics: Auditoría de Participación con IA
+# sTEAMdistics
 
-Este script (`generate_stats_ai.py`) es una herramienta **exclusiva para docentes**. Analiza el historial de Git de los alumnos y utiliza la IA de Google (Gemini) para comparar lo que dicen los mensajes de commit contra el código real que escribieron (diffs), generando un reporte de integridad y un resumen técnico detallado.
-
-### 📋 Requisitos
-*   **Python 3** instalado.
-*   Una **API Key de Gemini** (es gratuita y se obtiene en segundos).
+Herramienta para docentes. Analiza el historial Git de un repo de alumnos y genera un reporte de participación con análisis de IA (Gemini).
 
 ---
 
-### 1️⃣ Configuración Inicial (Solo una vez)
+## Requisitos
 
-Para no tener que pegar tu clave cada vez que corres el script, vamos a guardarla en tu configuración global de Git. Esto es seguro y no entra en conflicto con otras herramientas de trabajo.
-
-1.  Obtén tu clave en: [Google AI Studio - API Keys](https://aistudio.google.com/app/apikey).
-2.  Copia la clave (empieza con `AIza...`).
-3.  Ejecuta el siguiente comando en tu terminal (reemplazando por tu clave):
-
-```bash
-git config --global sTEAMdistics.ai-key "TU_CLAVE_AQUI"
-```
-
-4.  **Verifica que se guardó correctamente:**
-```bash
-git config --get sTEAMdistics.ai-key
-```
-> Si el comando anterior te devuelve tu clave, ¡ya estás listo!
-
-> **Alternativa:** También podés exportar la clave como variable de entorno en lugar de usar git config:
-> ```bash
-> export STEAMDISTICS_AI_KEY="TU_CLAVE_AQUI"
-> ```
+- Python 3
+- API Key de Gemini (gratuita): [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 
 ---
 
-### 2️⃣ Cómo Correrlo
+## Configuración (una sola vez)
 
-El script se debe ejecutar **dentro de la carpeta del proyecto del alumno**.
+Guardá la clave en tu configuración global de Git:
 
-#### Caso A: Desde el último Tag hasta HEAD (Ideal para entregas parciales)
 ```bash
-python3 path/to/sTEAMdistics/generate_stats_ai.py -h --ai
+git config --global sTEAMdistics.ai-key "TU_CLAVE"
 ```
 
-#### Caso B: Entre los últimos dos Tags (Ideal para entregas finales)
+O como variable de entorno si preferís:
+
 ```bash
-python3 path/to/sTEAMdistics/generate_stats_ai.py -T --ai
+export STEAMDISTICS_AI_KEY="TU_CLAVE"
 ```
 
 ---
 
-### 3️⃣ Resultado: `{repo}-stats-{fecha}.md`
+## Uso
 
-El script generará un archivo local con el nombre del repositorio y la fecha, por ejemplo: `mi-repo-stats-2026-04-23.md`. Este reporte incluye:
+Ejecutar **dentro del repo del alumno**:
 
-*   **Resumen de Participación:** Porcentaje de líneas agregadas/borradas por usuario, con links clickeables a la sección de cada uno.
-*   **Distribución por Package:** Cuánto aportó cada uno en Modelo, Persistencia, Servicios, etc.
-*   **Auditoría de IA (Confidencial):**
-    *   **Resumen técnico:** Un desglose de qué clases y capas tocó el alumno realmente.
-    *   **Análisis de Integridad:** Evaluación de si los commits son veraces o si hay "ruido" (commits vacíos, mensajes genéricos como "fix", etc.).
-    *   **Distribución vs. equipo:** Comparación de la participación en cada capa contra el resto del grupo, detectando si alguien se especializó en una sola capa en lugar de pasar por todas.
-    *   **Patrón de refactors:** Detección de commits repetidos sobre los mismos archivos, evaluando si el alumno se trabó con una implementación o si infló artificialmente su actividad anterior.
+**Desde el último tag hasta HEAD** (entregas parciales):
+```bash
+python3 /ruta/a/sTEAMdistics/generate_stats_ai.py -H --ai
+```
 
-### 🚀 Automatización con GitHub Actions (CI)
+**Entre los dos últimos tags** (entregas finales):
+```bash
+python3 /ruta/a/sTEAMdistics/generate_stats_ai.py -T --ai
+```
 
-Este proyecto incluye un workflow para automatizar la auditoría en cada entrega (tag). Para configurarlo, consulta la guía de:
-👉 **[Setup de Logging en CI](docs/setup-logging-ci.md)**
+El flag `--ai` activa el análisis con Gemini. Sin él, genera solo las estadísticas de líneas por autor.
 
 ---
 
-### ⚠️ Notas Importantes para Docentes
+## Output
 
-*   **Privacidad:** El script **NO sube nada a GitHub**. El reporte es 100% local para que los alumnos no vean el análisis de la IA. No compartas el `.md` generado con ellos.
-*   **Aislamiento:** Esta configuración usa la clave `sTEAMdistics.ai-key` de Git, por lo que no interfiere con ninguna otra configuración de Gemini que tengas en tu PC de trabajo.
-*   **Costo:** Usamos `gemini-2.5-flash` (con fallback a `gemini-2.0-flash` y `gemini-2.0-flash-lite`), todos **gratuitos** hasta un límite muy alto. No deberían tener problemas de costos.
+Se genera un archivo local `{repo}-stats-{fecha}.md` con:
+
+- Tabla comparativa de actividad por autor (líneas agregadas/borradas, porcentaje)
+- Distribución de aportes por capa (modelo, persistencia, servicios, etc.)
+- Análisis de IA por autor:
+  - Qué clases y capas tocó realmente
+  - Calidad y veracidad de los mensajes de commit
+  - Comparación de participación vs. el resto del equipo
+  - Detección de commits repetidos sobre los mismos archivos
+
+El archivo **no se sube al repo** — queda solo en tu máquina.
+
+---
+
+## Automatización con CI
+
+Para que el reporte se genere automáticamente al crear un tag en el repo del alumno, ver: [docs/ci-setup.md](docs/ci-setup.md)
