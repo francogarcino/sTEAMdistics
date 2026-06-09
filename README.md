@@ -17,18 +17,18 @@ Para no tener que pegar tu clave cada vez que corres el script, vamos a guardarl
 3.  Ejecuta el siguiente comando en tu terminal (reemplazando por tu clave):
 
 ```bash
-git config --global sTEAMdistics.ai-keys "TU_CLAVE_AQUI"
+git config --global sTEAMdistics.ai-key "TU_CLAVE_AQUI"
 ```
 
 4.  **Verifica que se guardó correctamente:**
 ```bash
-git config --get sTEAMdistics.ai-keys
+git config --get sTEAMdistics.ai-key
 ```
 > Si el comando anterior te devuelve tu clave, ¡ya estás listo!
 
 > **Alternativa:** También podés exportar la clave como variable de entorno en lugar de usar git config:
 > ```bash
-> export EPERS_STATS_AI_KEYS="TU_CLAVE_AQUI"
+> export STEAMDISTICS_AI_KEY="TU_CLAVE_AQUI"
 > ```
 
 ---
@@ -71,5 +71,5 @@ Este proyecto incluye un workflow para automatizar la auditoría en cada entrega
 ### ⚠️ Notas Importantes para Docentes
 
 *   **Privacidad:** El script **NO sube nada a GitHub**. El reporte es 100% local para que los alumnos no vean el análisis de la IA. No compartas el `.md` generado con ellos.
-*   **Aislamiento:** Esta configuración usa la clave `sTEAMdistics.ai-keys` de Git, por lo que no interfiere con ninguna otra configuración de Gemini que tengas en tu PC de trabajo.
+*   **Aislamiento:** Esta configuración usa la clave `sTEAMdistics.ai-key` de Git, por lo que no interfiere con ninguna otra configuración de Gemini que tengas en tu PC de trabajo.
 *   **Costo:** Usamos `gemini-2.5-flash` (con fallback a `gemini-2.0-flash` y `gemini-2.0-flash-lite`), todos **gratuitos** hasta un límite muy alto. No deberían tener problemas de costos.

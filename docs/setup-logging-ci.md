@@ -50,7 +50,7 @@ En el repo del alumno → **Settings → Secrets and variables → Actions → N
 | Secret | Valor |
 | :--- | :--- |
 | `STEAMDISTICS_READ_TOKEN` | Token de lectura de sTEAMdistics (Paso 2) |
-| `AI_API_KEY` | Clave de API de Google Gemini (`AIzaSy...`) |
+| `STEAMDISTICS_AI_KEY` | Clave de API de Google Gemini (`AIzaSy...`) |
 | `ANALISIS_REPO_TOKEN` | Token de escritura al repo de análisis (Paso 2) |
 | `ANALISIS_REPO` | Path del repo de análisis (ej: `francogarcino/repos-contributions-test`) |
 

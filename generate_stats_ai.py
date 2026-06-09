@@ -232,11 +232,11 @@ def build_prompt(author, commits, diff_summaries, team_package_stats):
         f"Diffs:\n{combined_diffs}"
     )
 
-def analyze_participation_with_ai(author, commits, diff_summaries, api_keys, team_package_stats=None):
-    if not api_keys:
+def analyze_participation_with_ai(author, commits, diff_summaries, api_key, team_package_stats=None):
+    if not api_key:
         return "**[IA] Error: Sin API Key.**"
 
-    key = re.sub(r'[^a-zA-Z0-9_\-]', '', api_keys[0])
+    key = re.sub(r'[^a-zA-Z0-9_\-]', '', api_key)
     prompt = build_prompt(author, commits, diff_summaries, team_package_stats)
 
     for ver, mod in GEMINI_MODELS:
@@ -267,12 +267,12 @@ def render_summary_table(authors, stats):
         lines.append(f"| {link} | {a} | {d} | {balance} | {pct}% {make_bar(pct)} |")
     return "\n".join(lines)
 
-def render_author_section(author, s, ai_enabled, ai_keys, team_package_stats):
+def render_author_section(author, s, ai_enabled, ai_key, team_package_stats):
     lines = [f"### {author}", "---"]
 
-    if ai_enabled and ai_keys:
+    if ai_enabled and ai_key:
         analysis = analyze_participation_with_ai(
-            author, s['commits'], s['diff_summary'], ai_keys, team_package_stats
+            author, s['commits'], s['diff_summary'], ai_key, team_package_stats
         )
         lines.append(analysis)
         lines.append("")
@@ -287,7 +287,7 @@ def render_author_section(author, s, ai_enabled, ai_keys, team_package_stats):
     lines.append("")
     return "\n".join(lines)
 
-def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_keys=None):
+def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_key=None):
     authors = sorted(stats.keys())
     team_package_stats = {a: stats[a]['packages'] for a in authors}
 
@@ -301,10 +301,10 @@ def generate_markdown(repo_name, run_date, period, stats, ai_enabled=False, ai_k
     ]
 
     for author in authors:
-        if ai_enabled and ai_keys:
+        if ai_enabled and ai_key:
             print(f"  → Analizando {author}...")
         sections.append(render_author_section(
-            author, stats[author], ai_enabled, ai_keys, team_package_stats
+            author, stats[author], ai_enabled, ai_key, team_package_stats
         ))
 
     return "\n".join(sections)
@@ -325,18 +325,17 @@ def main():
                         help='Activa el análisis de integridad con Gemini (requiere API Key configurada).')
     args = parser.parse_args()
 
-    api_keys = []
+    api_key = None
     if args.ai:
         try:
-            raw = os.environ.get('STEAMDISTICS_AI_KEYS', '') or run(["git", "config", "--get", "sTEAMdistics.ai-keys"])
+            api_key = os.environ.get('STEAMDISTICS_AI_KEY', '') or run(["git", "config", "--get", "sTEAMdistics.ai-key"])
         except RuntimeError:
-            raw = ''
-        api_keys = [k.strip() for k in raw.split(',') if k.strip()]
-        if not api_keys:
+            api_key = ''
+        if not api_key:
             raise SystemExit(
                 "Error: --ai requiere una API Key de Gemini.\n"
-                "Configurala con: git config --global sTEAMdistics.ai-keys \"TU_CLAVE\"\n"
-                "O definí la variable de entorno: STEAMDISTICS_AI_KEYS=\"TU_CLAVE\""
+                "Configurala con: git config --global sTEAMdistics.ai-key \"TU_CLAVE\"\n"
+                "O definí la variable de entorno: STEAMDISTICS_AI_KEY=\"TU_CLAVE\""
             )
 
     tags = get_sorted_tags()
@@ -354,7 +353,7 @@ def main():
 
     repo_name = os.path.basename(run(["git", "rev-parse", "--show-toplevel"]))
     run_date = datetime.now().strftime('%Y-%m-%d')
-    md = generate_markdown(repo_name, run_date, period, stats, ai_enabled=args.ai, ai_keys=api_keys)
+    md = generate_markdown(repo_name, run_date, period, stats, ai_enabled=args.ai, ai_key=api_key)
 
     filename = f"{repo_name}-stats-{run_date}.md"
     with open(filename, 'w', encoding='utf-8') as f:

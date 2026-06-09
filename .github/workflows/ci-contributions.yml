@@ -48,7 +48,7 @@ jobs:
 
       - name: Correr script
         env:
-          STEAMDISTICS_AI_KEYS: ${{ secrets.AI_API_KEY }}
+          STEAMDISTICS_AI_KEY: ${{ secrets.STEAMDISTICS_AI_KEY }}
         run: python3 std/generate_stats_ai.py -T --ai
 
 
