@@ -59,6 +59,25 @@ def get_sorted_tags():
     return [t for t in output.split('\n') if t.strip()]
 
 
+def _collect_patches(commit_range):
+    patch_cmd = ["git", "log", "--no-merges", "--stat", "--patch", "--format=COMMIT|||%ae|||%H", commit_range]
+    patches = {}
+    current_hash = None
+    current_lines = []
+    for line in run(patch_cmd).split('\n'):
+        if line.startswith('COMMIT|||'):
+            if current_hash and current_lines:
+                patches[current_hash] = '\n'.join(current_lines).strip()
+            parts = line.split('|||', 2)
+            current_hash = parts[2] if len(parts) == 3 else None
+            current_lines = []
+        elif current_hash is not None:
+            current_lines.append(line)
+    if current_hash and current_lines:
+        patches[current_hash] = '\n'.join(current_lines).strip()
+    return patches
+
+
 def get_git_stats(commit_range, collect_diffs=False):
     by_email = {}
     name_counts = defaultdict(lambda: defaultdict(int))
@@ -78,6 +97,8 @@ def get_git_stats(commit_range, collect_diffs=False):
                 if 'merge' not in message.lower():
                     ensure(email)['commits'].append(message)
 
+    patches = _collect_patches(commit_range) if collect_diffs else {}
+
     numstat_cmd = ["git", "log", "--no-merges", "--numstat", "--format=COMMIT|||%ae|||%H", commit_range]
     current_email = None
     for line in run(numstat_cmd).split('\n'):
@@ -87,8 +108,9 @@ def get_git_stats(commit_range, collect_diffs=False):
                 current_email, commit_hash = parts[1], parts[2]
                 entry = ensure(current_email)
                 if collect_diffs and len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
-                    diff = run(["git", "show", "--format=", "--stat", "--patch", commit_hash])
-                    entry['diff_summary'].append(diff[:MAX_DIFF_CHARS])
+                    diff = patches.get(commit_hash, '')
+                    if diff:
+                        entry['diff_summary'].append(diff[:MAX_DIFF_CHARS])
         elif line and current_email and '\t' in line:
             parts = line.split('\t', 2)
             if len(parts) == 3 and parts[0] != '-' and parts[1] != '-':
