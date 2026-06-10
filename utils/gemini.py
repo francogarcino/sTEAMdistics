@@ -49,7 +49,7 @@ def call_gemini_api(version, model, prompt, key):
         headers={'Content-Type': 'application/json'},
         method='POST',
     )
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read())
         candidate = data['candidates'][0]
         text = candidate['content']['parts'][0]['text'].strip()

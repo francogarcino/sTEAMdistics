@@ -87,30 +87,26 @@ def get_git_stats(commit_range, collect_diffs=False):
             by_email[email] = empty_author_entry()
         return by_email[email]
 
-    log_cmd = ["git", "log", "--no-merges", "--format=%an|||%ae|||%s", commit_range]
-    for line in run(log_cmd).split('\n'):
-        parts = line.split('|||', 2)
-        if len(parts) == 3:
-            name, email, message = (p.strip() for p in parts)
-            if email:
-                name_counts[email][name] += 1
-                if 'merge' not in message.lower():
-                    ensure(email)['commits'].append(message)
-
     patches = _collect_patches(commit_range) if collect_diffs else {}
 
-    numstat_cmd = ["git", "log", "--no-merges", "--numstat", "--format=COMMIT|||%ae|||%H", commit_range]
     current_email = None
-    for line in run(numstat_cmd).split('\n'):
+    commit_hash = None
+    combined_cmd = ["git", "log", "--no-merges", "--numstat", "--format=COMMIT|||%an|||%ae|||%H|||%s", commit_range]
+    for line in run(combined_cmd).split('\n'):
         if line.startswith('COMMIT|||'):
-            parts = line.split('|||', 2)
-            if len(parts) == 3:
-                current_email, commit_hash = parts[1], parts[2]
-                entry = ensure(current_email)
-                if collect_diffs and len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
-                    diff = patches.get(commit_hash, '')
-                    if diff:
-                        entry['diff_summary'].append(diff[:MAX_DIFF_CHARS])
+            parts = line.split('|||', 4)
+            if len(parts) == 5:
+                _, name, email, commit_hash, message = (p.strip() for p in parts)
+                current_email = email or None
+                if current_email:
+                    name_counts[current_email][name] += 1
+                    if 'merge' not in message.lower():
+                        ensure(current_email)['commits'].append(message)
+                    entry = ensure(current_email)
+                    if collect_diffs and len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
+                        diff = patches.get(commit_hash, '')
+                        if diff:
+                            entry['diff_summary'].append(diff[:MAX_DIFF_CHARS])
         elif line and current_email and '\t' in line:
             parts = line.split('\t', 2)
             if len(parts) == 3 and parts[0] != '-' and parts[1] != '-':
