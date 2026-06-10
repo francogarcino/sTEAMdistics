@@ -2,12 +2,16 @@
 
 Cuando un alumno hace push de un tag, el workflow genera el reporte automáticamente y lo sube a un repo privado de análisis al que solo acceden los docentes.
 
+El workflow real vive en `sTEAMdistics` (privado). En el repo del alumno solo va un archivo de 7 líneas que lo llama — sin lógica visible.
+
+> **Prerequisito para que funcione:** `sTEAMdistics` debe estar en un repo privado **dentro de la misma organización** que los repos de los alumnos. Mientras esté en una cuenta personal, los reusable workflows no cruzan el contexto de org.
+
 ---
 
 ## Antes de empezar
 
 Ambos repos deben ser **privados**:
-- `sTEAMdistics` — para que los alumnos no vean el script
+- `sTEAMdistics` — para que los alumnos no vean el script ni el workflow
 - El repo de análisis — donde van a quedar los reportes
 
 ---
@@ -39,13 +43,28 @@ Ambos tokens: expiration 1 año, copiarlos al crearlos (se muestran una sola vez
 | `STEAMDISTICS_READ_TOKEN` | Token de lectura (Paso 1) |
 | `STEAMDISTICS_AI_KEY` | API Key de Gemini (`AIzaSy...`) |
 | `ANALISIS_REPO_TOKEN` | Token de escritura (Paso 1) |
-| `ANALISIS_REPO` | Path del repo de análisis (ej: `francogarcino/analisis-epers`) |
+| `ANALISIS_REPO` | Path del repo de análisis (ej: `org/analisis-epers`) |
 
 ---
 
-## Paso 3 — Agregar el workflow
+## Paso 3 — Agregar el workflow al repo del alumno
 
-Copiar `.github/workflows/ci-contributions.yml` de este repo al repo del alumno en la misma ruta. Sin modificaciones.
+Copiar `docs/student-workflow-template.yml` al repo del alumno como `.github/workflows/ci-contributions.yml`.
+
+El archivo llama al workflow de `sTEAMdistics` directamente. Los alumnos solo ven esto:
+
+```yaml
+name: Auditoría de participación
+
+on:
+  push:
+    tags: ['*']
+
+jobs:
+  audit:
+    uses: TU_ORG/sTEAMdistics/.github/workflows/ci-contributions.yml@main
+    secrets: inherit
+```
 
 ---
 

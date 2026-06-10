@@ -1,0 +1,11 @@
+name: Auditoría de participación
+
+on:
+  push:
+    tags: ['*']
+
+jobs:
+  audit:
+    # TODO: cuando sTEAMdistics esté en la org, reemplazar "francogarcino" por el nombre de la org
+    uses: francogarcino/sTEAMdistics/.github/workflows/ci-contributions.yml@main
+    secrets: inherit

@@ -1,9 +1,7 @@
 name: Generar resumen de participación
 
 on:
-  push:
-    tags:
-      - '*'
+  workflow_call:
 
 jobs:
   generar-resumen:
