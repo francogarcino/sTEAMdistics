@@ -62,7 +62,8 @@ on:
 
 jobs:
   audit:
-    uses: TU_ORG/sTEAMdistics/.github/workflows/ci-contributions.yml@main
+    # TODO: cambiar por URL del repo en la organización
+    uses: francogarcino/sTEAMdistics/.github/workflows/ci-contributions.yml@feature/logging-workflow
     secrets: inherit
 ```
 
