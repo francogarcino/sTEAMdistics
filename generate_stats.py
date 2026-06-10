@@ -15,8 +15,6 @@ def main():
                        help='Analiza entre los últimos dos tags. Ideal para entregas finales.')
     parser.add_argument('--ai', action='store_true',
                         help='Activa el análisis de integridad con Gemini (requiere API Key configurada).')
-    parser.add_argument('--mode', default='analisis',
-                        help='Modo de análisis de IA (nombre del archivo en prompts/, sin extensión). Default: analisis.')
     args = parser.parse_args()
 
     api_key = None
@@ -47,7 +45,7 @@ def main():
 
     repo_name = os.path.basename(run(["git", "rev-parse", "--show-toplevel"]))
     run_date = datetime.now().strftime('%Y-%m-%d')
-    md = generate_markdown(repo_name, run_date, period, stats, api_key=api_key, mode=args.mode)
+    md = generate_markdown(repo_name, run_date, period, stats, api_key=api_key)
 
     filename = f"{repo_name}-stats-{run_date}.md"
     with open(filename, 'w', encoding='utf-8') as f:
