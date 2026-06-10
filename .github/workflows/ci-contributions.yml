@@ -47,7 +47,7 @@ jobs:
       - name: Correr script
         env:
           STEAMDISTICS_AI_KEY: ${{ secrets.STEAMDISTICS_AI_KEY }}
-        run: python3 std/generate_stats_ai.py -T --ai
+        run: python3 std/generate_stats.py -T --ai
 
 
       - name: Checkout repo de análisis
