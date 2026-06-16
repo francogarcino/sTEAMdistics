@@ -3,6 +3,7 @@ import os
 import argparse
 from datetime import datetime
 from utils.git import run, get_sorted_tags, get_git_stats
+from utils.gemini import analyze_participation_with_ai
 from utils.report import generate_markdown
 
 
@@ -41,11 +42,21 @@ def main():
         commit_range, period = f"{tags[-2]}..{tags[-1]}", f"{tags[-2]} → {tags[-1]}"
 
     print(f"Analizando {period}...")
-    stats = get_git_stats(commit_range, collect_diffs=args.ai)
+    stats = get_git_stats(commit_range, collect_diffs=bool(api_key))
+
+    analyses = {}
+    if api_key:
+        team_package_stats = {a: stats[a]['packages'] for a in stats}
+        for author in sorted(stats.keys()):
+            print(f"  → Analizando {author}...")
+            s = stats[author]
+            analyses[author] = analyze_participation_with_ai(
+                author, s['commits'], s['diff_summary'], api_key, team_package_stats
+            )
 
     repo_name = os.path.basename(run(["git", "rev-parse", "--show-toplevel"]))
     run_date = datetime.now().strftime('%Y-%m-%d')
-    md = generate_markdown(repo_name, run_date, period, stats, api_key=api_key)
+    md = generate_markdown(repo_name, run_date, period, stats, analyses=analyses)
 
     filename = f"{repo_name}-stats-{run_date}.md"
     with open(filename, 'w', encoding='utf-8') as f:

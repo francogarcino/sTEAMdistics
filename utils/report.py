@@ -1,6 +1,5 @@
 import re
 from utils.config import PACKAGES
-from utils.gemini import analyze_participation_with_ai
 
 
 def make_bar(percentage, width=10):
@@ -29,13 +28,10 @@ def render_summary_table(authors, stats):
     return "\n".join(lines)
 
 
-def render_author_section(author, s, api_key, team_package_stats, mode='analisis'):
+def render_author_section(author, s, analysis=None):
     lines = [f"### {author}", "---"]
 
-    if api_key:
-        analysis = analyze_participation_with_ai(
-            author, s['commits'], s['diff_summary'], api_key, team_package_stats, mode
-        )
+    if analysis:
         lines.append(analysis)
         lines.append("")
 
@@ -50,9 +46,8 @@ def render_author_section(author, s, api_key, team_package_stats, mode='analisis
     return "\n".join(lines)
 
 
-def generate_markdown(repo_name, run_date, period, stats, api_key=None, mode='analisis'):
+def generate_markdown(repo_name, run_date, period, stats, analyses=None):
     authors = sorted(stats.keys())
-    team_package_stats = {a: stats[a]['packages'] for a in authors}
 
     sections = [
         f"# Reporte de Participación: {repo_name}",
@@ -64,10 +59,8 @@ def generate_markdown(repo_name, run_date, period, stats, api_key=None, mode='an
     ]
 
     for author in authors:
-        if api_key:
-            print(f"  → Analizando {author}...")
         sections.append(render_author_section(
-            author, stats[author], api_key, team_package_stats, mode
+            author, stats[author], analysis=(analyses or {}).get(author)
         ))
 
     return "\n".join(sections)
