@@ -1,5 +1,4 @@
 import subprocess
-import re
 from collections import defaultdict
 from utils.config import PACKAGES, PACKAGE_PATTERNS, MAX_DIFFS_PER_AUTHOR, MAX_DIFF_CHARS
 
@@ -59,25 +58,6 @@ def get_sorted_tags():
     return [t for t in output.split('\n') if t.strip()]
 
 
-def _collect_patches(commit_range):
-    patch_cmd = ["git", "log", "--no-merges", "--stat", "--patch", "--format=COMMIT|||%ae|||%H", commit_range]
-    patches = {}
-    current_hash = None
-    current_lines = []
-    for line in run(patch_cmd).split('\n'):
-        if line.startswith('COMMIT|||'):
-            if current_hash and current_lines:
-                patches[current_hash] = '\n'.join(current_lines).strip()
-            parts = line.split('|||', 2)
-            current_hash = parts[2] if len(parts) == 3 else None
-            current_lines = []
-        elif current_hash is not None:
-            current_lines.append(line)
-    if current_hash and current_lines:
-        patches[current_hash] = '\n'.join(current_lines).strip()
-    return patches
-
-
 def get_git_stats(commit_range, collect_diffs=False):
     by_email = {}
     name_counts = defaultdict(lambda: defaultdict(int))
@@ -87,39 +67,71 @@ def get_git_stats(commit_range, collect_diffs=False):
             by_email[email] = empty_author_entry()
         return by_email[email]
 
-    patches = _collect_patches(commit_range) if collect_diffs else {}
+    def flush_patch(email, lines):
+        if collect_diffs and email and lines:
+            entry = ensure(email)
+            if len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
+                patch = '\n'.join(lines).strip()
+                if patch:
+                    entry['diff_summary'].append(patch[:MAX_DIFF_CHARS])
+
+    cmd = ["git", "log", "--no-merges", "-M", "--patch",
+           "--format=COMMIT|||%an|||%ae|||%H|||%s", commit_range]
 
     current_email = None
-    commit_hash = None
-    combined_cmd = ["git", "log", "--no-merges", "--numstat", "--format=COMMIT|||%an|||%ae|||%H|||%s", commit_range]
-    for line in run(combined_cmd).split('\n'):
+    current_file = None
+    pending_old   = None   # filepath del lado --- (para archivos eliminados)
+    patch_lines   = []
+
+    for line in run(cmd).split('\n'):
         if line.startswith('COMMIT|||'):
+            flush_patch(current_email, patch_lines)
+            patch_lines = []
             parts = line.split('|||', 4)
             if len(parts) == 5:
-                _, name, email, commit_hash, message = (p.strip() for p in parts)
+                _, name, email, _, message = (p.strip() for p in parts)
                 current_email = email or None
+                current_file  = None
+                pending_old   = None
                 if current_email:
                     name_counts[current_email][name] += 1
                     if 'merge' not in message.lower():
                         ensure(current_email)['commits'].append(message)
-                    entry = ensure(current_email)
-                    if collect_diffs and len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
-                        diff = patches.get(commit_hash, '')
-                        if diff:
-                            entry['diff_summary'].append(diff[:MAX_DIFF_CHARS])
-        elif line and current_email and '\t' in line:
-            parts = line.split('\t', 2)
-            if len(parts) == 3 and parts[0] != '-' and parts[1] != '-':
-                try:
-                    added, deleted, filepath = int(parts[0]), int(parts[1]), parts[2].strip()
+
+        elif line.startswith('diff --git '):
+            current_file = None
+            pending_old  = None
+
+        elif line.startswith('--- a/'):
+            pending_old = line[6:].strip()
+
+        elif line.startswith('+++ b/'):
+            current_file = line[6:].strip()
+            pending_old  = None
+
+        elif line.startswith('+++ /dev/null'):
+            current_file = pending_old   # archivo eliminado: usamos el path del lado ---
+            pending_old  = None
+
+        elif current_email and current_file:
+            if line.startswith('+') and not line.startswith('+++'):
+                if line[1:].strip():     # ignora líneas en blanco
                     s = ensure(current_email)
-                    s['added'] += added
-                    s['deleted'] += deleted
-                    pkg = map_file_to_package(filepath)
-                    s['packages'][pkg]['added'] += added
-                    s['packages'][pkg]['deleted'] += deleted
-                except ValueError:
-                    pass
+                    s['added'] += 1
+                    s['packages'][map_file_to_package(current_file)]['added'] += 1
+                if collect_diffs:
+                    patch_lines.append(line)
+            elif line.startswith('-') and not line.startswith('---'):
+                if line[1:].strip():     # ignora líneas en blanco
+                    s = ensure(current_email)
+                    s['deleted'] += 1
+                    s['packages'][map_file_to_package(current_file)]['deleted'] += 1
+                if collect_diffs:
+                    patch_lines.append(line)
+            elif collect_diffs and line and not line.startswith('\\'):
+                patch_lines.append(line)
+
+    flush_patch(current_email, patch_lines)
 
     raw_stats = {}
     for email, data in by_email.items():
