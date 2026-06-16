@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime
 from utils.git import run, get_sorted_tags, get_git_stats
 from utils.gemini import analyze_participation_with_ai
+from utils.github import fetch_open_issues, format_issues
 from utils.report import generate_markdown
 
 
@@ -89,11 +90,26 @@ def main():
                 "O definí la variable de entorno: STEAMDISTICS_AI_KEY=\"TU_CLAVE\""
             )
 
+    gh_token = os.environ.get('STEAMDISTICS_GH_TOKEN', '')
+    try:
+        gh_token = gh_token or run(["git", "config", "--get", "sTEAMdistics.gh-token"])
+    except RuntimeError:
+        pass
+
     tags = get_sorted_tags()
     commit_range, period, mode = resolve_range(args, tags)
 
     print(f"Analizando {period}...")
     stats = get_git_stats(commit_range, collect_diffs=bool(api_key))
+
+    issues_text = None
+    if mode == 'reentrega':
+        try:
+            issues = fetch_open_issues(token=gh_token or None)
+            issues_text = format_issues(issues)
+            print(f"  → {len(issues)} issue(s) encontrado(s) en GitHub.")
+        except RuntimeError as e:
+            print(f"  [!] No se pudieron bajar los issues: {e}")
 
     analyses = {}
     if api_key:
@@ -102,7 +118,8 @@ def main():
             print(f"  → Analizando {author}...")
             s = stats[author]
             analyses[author] = analyze_participation_with_ai(
-                author, s['commits'], s['diff_summary'], api_key, team_package_stats, mode
+                author, s['commits'], s['diff_summary'], api_key, team_package_stats, mode,
+                issues=issues_text,
             )
 
     repo_name = os.path.basename(run(["git", "rev-parse", "--show-toplevel"]))

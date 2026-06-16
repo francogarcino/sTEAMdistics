@@ -25,7 +25,7 @@ def build_team_summary(team_package_stats):
     return "Distribución por capas del equipo (para comparar):\n" + "\n".join(lines)
 
 
-def build_prompt(author, commits, diff_summaries, team_package_stats, mode='analisis'):
+def build_prompt(author, commits, diff_summaries, team_package_stats, mode='analisis', issues=None):
     template = _load_prompt_template(mode)
     combined_diffs = "\n---\n".join(diff_summaries)[:MAX_TOTAL_DIFF_CHARS]
     team_summary = build_team_summary(team_package_stats) if team_package_stats else ""
@@ -34,6 +34,7 @@ def build_prompt(author, commits, diff_summaries, team_package_stats, mode='anal
         commits=commits[:MAX_COMMITS_FOR_AI],
         team_summary=team_summary,
         diffs=combined_diffs,
+        issues=issues or "",
     )
 
 
@@ -58,12 +59,12 @@ def call_gemini_api(version, model, prompt, key):
         return text
 
 
-def analyze_participation_with_ai(author, commits, diff_summaries, api_key, team_package_stats=None, mode='analisis'):
+def analyze_participation_with_ai(author, commits, diff_summaries, api_key, team_package_stats=None, mode='analisis', issues=None):
     if not api_key:
         return "**[IA] Error: Sin API Key.**"
 
     key = re.sub(r'[^a-zA-Z0-9_\-]', '', api_key)
-    prompt = build_prompt(author, commits, diff_summaries, team_package_stats, mode)
+    prompt = build_prompt(author, commits, diff_summaries, team_package_stats, mode, issues=issues)
 
     last_error = None
     for ver, mod in GEMINI_MODELS:
