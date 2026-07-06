@@ -1,0 +1,11 @@
+name: Auditoría de participación
+
+on:
+  push:
+    tags: ['*']
+
+jobs:
+  audit:
+    # TODO: cambiar por URL del repo en la organización
+    uses: francogarcino/sTEAMdistics/.github/workflows/ci-contributions.yml@feature/logging-workflow
+    secrets: inherit

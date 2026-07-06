@@ -1,70 +1,73 @@
-# 🤖 Guía de Auditoría de Participación con IA (EPERS)
+# sTEAMdistics
 
-Este script (`generate_stats_ai.py`) es una herramienta **exclusiva para docentes**. Analiza el historial de Git de los alumnos y utiliza la IA de Google (Gemini) para comparar lo que dicen los mensajes de commit contra el código real que escribieron (diffs), generando un reporte de integridad y un resumen técnico detallado.
-
-### 📋 Requisitos
-*   **Python 3** instalado.
-*   Una **API Key de Gemini** (es gratuita y se obtiene en segundos).
+Herramienta para docentes. Analiza el historial Git de un repo de alumnos y genera un reporte de participación con análisis de IA (Gemini).
 
 ---
 
-### 1️⃣ Configuración Inicial (Solo una vez)
+## Requisitos
 
-Para no tener que pegar tu clave cada vez que corres el script, vamos a guardarla en tu configuración global de Git. Esto es seguro y no entra en conflicto con otras herramientas de trabajo.
-
-1.  Obtén tu clave en: [Google AI Studio - API Keys](https://aistudio.google.com/app/apikey).
-2.  Copia la clave (empieza con `AIza...`).
-3.  Ejecuta el siguiente comando en tu terminal (reemplazando por tu clave):
-
-```bash
-git config --global epers.ai-keys "TU_CLAVE_AQUI"
-```
-
-4.  **Verifica que se guardó correctamente:**
-```bash
-git config --get epers.ai-keys
-```
-> Si el comando anterior te devuelve tu clave, ¡ya estás listo!
-
-> **Alternativa:** También podés exportar la clave como variable de entorno en lugar de usar git config:
-> ```bash
-> export EPERS_STATS_AI_KEYS="TU_CLAVE_AQUI"
-> ```
+- Python 3
+- API Key de Gemini (gratuita): [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 
 ---
 
-### 2️⃣ Cómo Correrlo
+## Configuración (una sola vez)
 
-El script se debe ejecutar **dentro de la carpeta del proyecto del alumno**.
+### API Key de Gemini (requerida para `--ai`)
 
-#### Caso A: Desde el último Tag hasta HEAD (Ideal para entregas parciales)
 ```bash
-python3 path/to/repos-epers/generate_stats_ai.py -H --ai
+git config --global sTEAMdistics.ai-key "TU_CLAVE"
+# o como variable de entorno:
+export STEAMDISTICS_AI_KEY="TU_CLAVE"
 ```
 
-#### Caso B: Entre los últimos dos Tags (Ideal para entregas finales)
+### Token de GitHub (requerido para `-R` en repos privados)
+
 ```bash
-python3 path/to/repos-epers/generate_stats_ai.py -T --ai
+git config --global sTEAMdistics.gh-token "TU_TOKEN"
+# o como variable de entorno:
+export STEAMDISTICS_GH_TOKEN="TU_TOKEN"
 ```
+
+Para repos públicos no es necesario. El token necesita permiso de lectura sobre issues (`repo` scope o `public_repo`).
 
 ---
 
-### 3️⃣ Resultado: `{repo}-stats-{fecha}.md`
+## Uso
 
-El script generará un archivo local con el nombre del repositorio y la fecha, por ejemplo: `mi-repo-stats-2026-04-23.md`. Este reporte incluye:
+Ejecutar **dentro del repo del alumno**:
 
-*   **Resumen de Participación:** Porcentaje de líneas agregadas/borradas por usuario, con links clickeables a la sección de cada uno.
-*   **Distribución por Package:** Cuánto aportó cada uno en Modelo, Persistencia, Servicios, etc.
-*   **Auditoría de IA (Confidencial):**
-    *   **Resumen técnico:** Un desglose de qué clases y capas tocó el alumno realmente.
-    *   **Análisis de Integridad:** Evaluación de si los commits son veraces o si hay "ruido" (commits vacíos, mensajes genéricos como "fix", etc.).
-    *   **Distribución vs. equipo:** Comparación de la participación en cada capa contra el resto del grupo, detectando si alguien se especializó en una sola capa en lugar de pasar por todas.
-    *   **Patrón de refactors:** Detección de commits repetidos sobre los mismos archivos, evaluando si el alumno se trabó con una implementación o si infló artificialmente su actividad.
+```bash
+python3 /ruta/a/sTEAMdistics/generate_stats.py [MODO] [--ai]
+```
+
+| Modo | Descripción |
+|------|-------------|
+| `-H` | Último tag → HEAD (entregas parciales) |
+| `-T` | Penúltimo tag → último tag (entregas finales) |
+| `-R` | Igual que `-T`, pero con prompt de reentrega — baja los issues abiertos de GitHub y analiza si fueron corregidos |
+| *(sin modo)* | Lista los tags disponibles y permite elegir el rango de forma interactiva |
+
+El flag `--ai` activa el análisis con Gemini. Sin él, genera solo las estadísticas de líneas por autor.
 
 ---
 
-### ⚠️ Notas Importantes para Docentes
+## Output
 
-*   **Privacidad:** El script **NO sube nada a GitHub**. El reporte es 100% local para que los alumnos no vean el análisis de la IA. No compartas el `.md` generado con ellos.
-*   **Aislamiento:** Esta configuración usa la clave `epers.ai-keys` de Git, por lo que no interfiere con ninguna otra configuración de Gemini que tengas en tu PC de trabajo.
-*   **Costo:** Usamos `gemini-2.5-flash` (con fallback a `gemini-2.0-flash` y `gemini-2.0-flash-lite`), todos **gratuitos** hasta un límite muy alto. No deberían tener problemas de costos.
+Se genera un archivo local `{repo}-stats-{fecha}.md` con:
+
+- Tabla comparativa de actividad por autor (líneas agregadas/borradas, porcentaje)
+- Distribución de aportes por capa (modelo, persistencia, servicios, etc.)
+- Análisis de IA por autor (con `--ai`):
+  - Desequilibrio de participación entre capas
+  - Coherencia entre capas (ej: agrega modelos sin persistirlos)
+  - Calidad del gitflow: nombres de commits, merges/reverts, commits inflados
+  - En modo `-R`: qué issues fueron corregidos y si las correcciones son genuinas
+
+El archivo **no se sube al repo** — queda solo en tu máquina.
+
+---
+
+## Automatización con CI
+
+Para que el reporte se genere automáticamente al crear un tag en el repo del alumno, ver: [docs/ci-setup.md](docs/ci-setup.md)

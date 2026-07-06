@@ -1,0 +1,74 @@
+name: Generar resumen de participación
+
+on:
+  workflow_call:
+
+jobs:
+  generar-resumen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo del equipo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Obtener tags relevantes
+        id: tags
+        run: |
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -v "^$CURRENT_TAG$" | head -n 1)
+          echo "current=$CURRENT_TAG" >> $GITHUB_OUTPUT
+          echo "previous=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      - name: Inferir metadata
+        id: meta
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          TEAM_NAME="${REPO_NAME%-TP}"
+          YEAR=$(date +%Y)
+          MONTH=$(date +%-m)
+          if [ "$MONTH" -ge 3 ] && [ "$MONTH" -le 7 ]; then
+            SEMESTER="primer-cursada"
+          else
+            SEMESTER="segunda-cursada"
+          fi
+          echo "team=$TEAM_NAME" >> $GITHUB_OUTPUT
+          echo "year=$YEAR" >> $GITHUB_OUTPUT
+          echo "semester=$SEMESTER" >> $GITHUB_OUTPUT
+
+      - name: Checkout sTEAMdistics
+        uses: actions/checkout@v4
+        with:
+          repository: francogarcino/sTEAMdistics
+          token: ${{ secrets.STEAMDISTICS_READ_TOKEN }}
+          path: std
+
+      - name: Correr script
+        env:
+          STEAMDISTICS_AI_KEY: ${{ secrets.STEAMDISTICS_AI_KEY }}
+        run: python3 std/generate_stats.py -T --ai
+
+
+      - name: Checkout repo de análisis
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.ANALISIS_REPO }}
+          token: ${{ secrets.ANALISIS_REPO_TOKEN }}
+          path: analisis-repo
+
+      - name: Mover output al repo de análisis
+        run: |
+          DEST="analisis-repo/${{ steps.meta.outputs.year }}/${{ steps.meta.outputs.semester }}/${{ steps.meta.outputs.team }}"
+          mkdir -p "$DEST"
+          OUTPUT_FILE=$(ls *-stats-*.md | head -n 1)
+          cp "$OUTPUT_FILE" "$DEST/${{ steps.tags.outputs.current }}.md"
+
+      - name: Commit y push
+        run: |
+          cd analisis-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "[${{ steps.meta.outputs.team }}] Resumen ${{ steps.tags.outputs.current }}"
+          git push
