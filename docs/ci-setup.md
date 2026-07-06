@@ -63,7 +63,7 @@ on:
 jobs:
   audit:
     # TODO: cambiar por URL del repo en la organización
-    uses: francogarcino/sTEAMdistics/.github/workflows/ci-contributions.yml@feature/logging-workflow
+    uses: francogarcino/sTEAMdistics/.github/workflows/ci-contributions.yml@develop
     secrets: inherit
 ```
 
