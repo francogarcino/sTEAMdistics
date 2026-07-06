@@ -3,7 +3,7 @@ import re
 import urllib.request
 import urllib.error
 from pathlib import Path
-from utils.config import PACKAGES, GEMINI_MODELS, MAX_COMMITS_FOR_AI, MAX_TOTAL_DIFF_CHARS
+from utils.config import PACKAGES, GEMINI_MODELS, MAX_TOTAL_DIFF_CHARS
 
 PROMPTS_DIR = Path(__file__).parent.parent / 'prompts'
 
@@ -31,7 +31,7 @@ def build_prompt(author, commits, diff_summaries, team_package_stats, mode='anal
     team_summary = build_team_summary(team_package_stats) if team_package_stats else ""
     return template.format(
         author=author,
-        commits=commits[:MAX_COMMITS_FOR_AI],
+        commits=commits,
         team_summary=team_summary,
         diffs=combined_diffs,
         issues=issues or "",

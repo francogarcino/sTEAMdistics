@@ -1,6 +1,6 @@
 import subprocess
 from collections import defaultdict
-from utils.config import PACKAGES, PACKAGE_PATTERNS, MAX_DIFFS_PER_AUTHOR, MAX_DIFF_CHARS
+from utils.config import PACKAGES, PACKAGE_PATTERNS, GENERATED_PATH_PATTERN
 
 
 def run(cmd):
@@ -22,6 +22,10 @@ def map_file_to_package(filepath):
         if matches(filepath):
             return pkg
     return 'utils/otros'
+
+
+def is_relevant_for_diff(filepath):
+    return not GENERATED_PATH_PATTERN.search(filepath)
 
 
 def empty_author_entry():
@@ -47,7 +51,6 @@ def merge_stats(target, source):
     target['deleted'] += source['deleted']
     target['commits'].extend(source['commits'])
     target['diff_summary'].extend(source['diff_summary'])
-    target['diff_summary'] = target['diff_summary'][:MAX_DIFFS_PER_AUTHOR]
     for p in PACKAGES:
         target['packages'][p]['added'] += source['packages'][p]['added']
         target['packages'][p]['deleted'] += source['packages'][p]['deleted']
@@ -69,13 +72,11 @@ def get_git_stats(commit_range, collect_diffs=False):
 
     def flush_patch(email, lines):
         if collect_diffs and email and lines:
-            entry = ensure(email)
-            if len(entry['diff_summary']) < MAX_DIFFS_PER_AUTHOR:
-                patch = '\n'.join(lines).strip()
-                if patch:
-                    entry['diff_summary'].append(patch[:MAX_DIFF_CHARS])
+            patch = '\n'.join(lines).strip()
+            if patch:
+                ensure(email)['diff_summary'].append(patch)
 
-    cmd = ["git", "log", "--no-merges", "-M", "--patch",
+    cmd = ["git", "log", "--no-merges", "-M", "--unified=0", "--patch",
            "--format=COMMIT|||%an|||%ae|||%H|||%s", commit_range]
 
     current_email = None
@@ -119,16 +120,16 @@ def get_git_stats(commit_range, collect_diffs=False):
                     s = ensure(current_email)
                     s['added'] += 1
                     s['packages'][map_file_to_package(current_file)]['added'] += 1
-                if collect_diffs:
+                if collect_diffs and is_relevant_for_diff(current_file):
                     patch_lines.append(line)
             elif line.startswith('-') and not line.startswith('---'):
                 if line[1:].strip():     # ignora líneas en blanco
                     s = ensure(current_email)
                     s['deleted'] += 1
                     s['packages'][map_file_to_package(current_file)]['deleted'] += 1
-                if collect_diffs:
+                if collect_diffs and is_relevant_for_diff(current_file):
                     patch_lines.append(line)
-            elif collect_diffs and line and not line.startswith('\\'):
+            elif collect_diffs and is_relevant_for_diff(current_file) and line and not line.startswith('\\'):
                 patch_lines.append(line)
 
     flush_patch(current_email, patch_lines)

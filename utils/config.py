@@ -1,3 +1,5 @@
+import re
+
 PACKAGES = [
     'model/modelo',
     'persistence/persistencia',
@@ -22,7 +24,10 @@ GEMINI_MODELS = [
     ("v1beta", "gemini-2.0-flash-lite"),
 ]
 
-MAX_DIFFS_PER_AUTHOR  = 15
-MAX_COMMITS_FOR_AI    = 20
-MAX_DIFF_CHARS        = 1500
-MAX_TOTAL_DIFF_CHARS  = 10000
+GENERATED_PATH_PATTERN = re.compile(
+    r'(^|/)(target|build|\.idea|\.vscode|\.mvn|node_modules|dist|out)/'
+    r'|\.(class|jar|war)$'
+    r'|(^|/)(package-lock\.json|yarn\.lock)$'
+)
+
+MAX_TOTAL_DIFF_CHARS = 40000
