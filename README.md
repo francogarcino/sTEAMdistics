@@ -64,10 +64,10 @@ Se genera un archivo local `{repo}-stats-{fecha}.md` con:
   - Calidad del gitflow: nombres de commits, merges/reverts, commits inflados
   - En modo `-R`: qué issues fueron corregidos y si las correcciones son genuinas
 
-El archivo **no se sube al repo** — queda solo en tu máquina.
+El archivo **no se sube al repo del alumno** — corriendo el script manualmente, queda solo en tu máquina.
 
 ---
 
 ## Automatización con CI
 
-Para que el reporte se genere automáticamente al crear un tag en el repo del alumno, ver: [docs/ci-setup.md](docs/ci-setup.md)
+Corrido así, a mano, el reporte no queda registrado en ningún lado más que tu máquina. Para que se genere automáticamente al crear un tag y quede centralizado en un repo de análisis aparte (accesible solo para docentes), ver: [docs/ci-setup.md](docs/ci-setup.md)
