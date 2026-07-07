@@ -25,13 +25,19 @@ def build_team_summary(team_package_stats):
     return "Distribución por capas del equipo (para comparar):\n" + "\n".join(lines)
 
 
+def format_commits(commits):
+    if not commits:
+        return "(sin commits registrados)"
+    return "\n".join(f"- {c}" for c in commits)
+
+
 def build_prompt(author, commits, diff_summaries, team_package_stats, mode='analisis', issues=None):
     template = _load_prompt_template(mode)
     combined_diffs = "\n---\n".join(diff_summaries)[:MAX_TOTAL_DIFF_CHARS]
     team_summary = build_team_summary(team_package_stats) if team_package_stats else ""
     return template.format(
         author=author,
-        commits=commits,
+        commits=format_commits(commits),
         team_summary=team_summary,
         diffs=combined_diffs,
         issues=issues or "",

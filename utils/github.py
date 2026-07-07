@@ -1,8 +1,24 @@
 import json
 import re
+import unicodedata
 import urllib.request
 import urllib.error
 from utils.git import run
+
+SEVERITY_RANK = {'grave': 0, 'corregir': 1, 'menor': 2, 'observacion': 3}
+SEVERITY_DISPLAY = {'grave': 'Grave', 'corregir': 'Corregir', 'menor': 'Menor', 'observacion': 'Observación'}
+
+
+def _normalize_label(name):
+    return unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode().lower().strip()
+
+
+def _severity_of(issue):
+    for label in issue.get('labels', []):
+        normalized = _normalize_label(label.get('name', ''))
+        if normalized in SEVERITY_RANK:
+            return normalized
+    return None
 
 
 def _parse_github_remote(url):
@@ -41,12 +57,20 @@ def fetch_open_issues(token=None):
 def format_issues(issues):
     if not issues:
         return "No hay issues abiertos."
+
+    def sort_key(issue):
+        return SEVERITY_RANK.get(_severity_of(issue), len(SEVERITY_RANK))
+
     lines = []
-    for issue in issues:
+    for issue in sorted(issues, key=sort_key):
         body = (issue.get('body') or '').strip().replace('\n', ' ')
         if len(body) > 200:
             body = body[:200] + '...'
-        line = f"#{issue['number']}: {issue['title']}"
+        severity = _severity_of(issue)
+        prefix = f"#{issue['number']}"
+        if severity:
+            prefix += f" [{SEVERITY_DISPLAY[severity]}]"
+        line = f"{prefix}: {issue['title']}"
         if body:
             line += f" — {body}"
         lines.append(line)

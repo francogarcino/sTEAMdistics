@@ -103,16 +103,23 @@ def main():
     stats = get_git_stats(commit_range, collect_diffs=bool(api_key))
 
     issues_text = None
+    skip_ai = False
     if mode == 'reentrega':
         try:
             issues = fetch_open_issues(token=gh_token or None)
-            issues_text = format_issues(issues)
-            print(f"  → {len(issues)} issue(s) encontrado(s) en GitHub.")
         except RuntimeError as e:
             print(f"  [!] No se pudieron bajar los issues: {e}")
+            print("  → Sin datos de issues no corresponde un análisis de reentrega.")
+            issues, skip_ai = [], True
+        if not issues:
+            print("  → No hay issues abiertos: no corresponde un análisis de reentrega.")
+            skip_ai = True
+        else:
+            issues_text = format_issues(issues)
+            print(f"  → {len(issues)} issue(s) encontrado(s) en GitHub.")
 
     analyses = {}
-    if api_key:
+    if api_key and not skip_ai:
         team_package_stats = {a: stats[a]['packages'] for a in stats}
         for author in sorted(stats.keys()):
             print(f"  → Analizando {author}...")
