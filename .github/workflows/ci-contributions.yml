@@ -41,6 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: francogarcino/sTEAMdistics
+          ref: develop # TODO: sacar una vez que develop mergee a main
           token: ${{ secrets.STEAMDISTICS_READ_TOKEN }}
           path: std
 

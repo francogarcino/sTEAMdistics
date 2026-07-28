@@ -1,0 +1,10 @@
+name: Auditoría de participación (self-test)
+
+on:
+  push:
+    tags: ['*']
+
+jobs:
+  audit:
+    uses: ./.github/workflows/ci-contributions.yml
+    secrets: inherit
