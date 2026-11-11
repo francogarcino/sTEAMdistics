@@ -1,0 +1,108 @@
+name: Analizar tag
+
+# Lo disparan los repos de equipos (workflow docs/workflow-equipo.yml) con un token que solo
+# tiene Actions: write sobre este repo. Ese token se asume filtrado: los inputs no son
+# confiables, se validan y nunca se interpolan en `run:`. Los logs no muestran contenido.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repo del equipo (org/nombre)
+        required: true
+        type: string
+      tag:
+        description: Tag pusheado
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analisis-${{ inputs.repo }}
+  cancel-in-progress: true
+
+jobs:
+  analizar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: produccion
+    timeout-minutes: 30
+    steps:
+      - name: Validar entrada
+        id: entrada
+        env:
+          REPO: ${{ inputs.repo }}
+          ORG: ${{ github.repository_owner }}
+        run: |
+          owner="${REPO%%/*}"
+          if [[ ! "$REPO" =~ ^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$ ]] || [[ "${owner,,}" != "${ORG,,}" ]]; then
+            echo "Sin análisis: repo inválido."
+            echo "valido=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "valido=true" >> "$GITHUB_OUTPUT"
+          echo "nombre=${REPO#*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout sTEAMdistics
+        if: steps.entrada.outputs.valido == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Preparar rama reportes
+        if: steps.entrada.outputs.valido == 'true'
+        run: |
+          if git ls-remote --exit-code --heads origin reportes > /dev/null; then
+            git fetch -q origin reportes
+            git worktree add -q -B reportes reportes-wt origin/reportes
+          else
+            git worktree add -q --orphan -b reportes reportes-wt
+          fi
+
+      - name: Token de lectura del repo del equipo
+        if: steps.entrada.outputs.valido == 'true'
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.STEAMDISTICS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.STEAMDISTICS_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ steps.entrada.outputs.nombre }}
+          permission-contents: read
+          permission-issues: read
+          permission-members: read
+
+      - name: Analizar
+        if: steps.entrada.outputs.valido == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          REPO: ${{ inputs.repo }}
+          TAG: ${{ inputs.tag }}
+        run: python3 -m steamdistics.orchestrator --repo "$REPO" --tag "$TAG" --reportes reportes-wt
+
+      - name: Publicar en la rama reportes
+        if: ${{ !cancelled() && steps.entrada.outputs.valido == 'true' }}
+        env:
+          REPO: ${{ inputs.repo }}
+          TAG: ${{ inputs.tag }}
+        working-directory: reportes-wt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Sin cambios para publicar."
+            exit 0
+          fi
+          git commit -q -m "[$REPO] $TAG"
+          for intento in 1 2 3 4 5; do
+            if git push -q origin HEAD:reportes; then
+              echo "Publicado."
+              exit 0
+            fi
+            sleep $((intento * 5))
+            git fetch -q origin reportes
+            git rebase -q origin/reportes
+          done
+          echo "ERROR: no se pudo publicar."
+          exit 1

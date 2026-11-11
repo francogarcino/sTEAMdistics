@@ -1,0 +1,2 @@
+# Formato .mailmap de git: unifica identidades que no se pueden vincular a un login de GitHub.
+# Nombre Canónico <email-canonico@ejemplo.com> <otro-email@ejemplo.com>

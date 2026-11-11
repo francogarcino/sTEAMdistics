@@ -1,0 +1,50 @@
+# Reglas del análisis. Son las mismas para todos los equipos.
+
+[capas]
+# Orden en que se muestran en el reporte. "otros" es la capa por defecto.
+orden = ["modelo", "persistencia", "servicio", "controller", "test", "otros"]
+
+# Las reglas se evalúan en orden: gana la primera que matchea.
+# `segmentos`: nombres de directorio del path (sin importar mayúsculas).
+# `sufijos`: final del nombre del archivo sin extensión (ej. "HibernatePersonajeDAO" termina en "dao").
+[[capas.reglas]]
+capa = "test"
+segmentos = ["test", "tests"]
+
+[[capas.reglas]]
+capa = "persistencia"
+segmentos = ["persistence", "persistencia", "dao", "daos", "repository", "repositories", "repositorio", "repositorios"]
+sufijos = ["dao", "daoimpl", "repository", "repositoryimpl", "repositorio"]
+
+[[capas.reglas]]
+capa = "servicio"
+segmentos = ["service", "services", "servicio", "servicios"]
+sufijos = ["service", "serviceimpl", "servicio"]
+
+[[capas.reglas]]
+capa = "controller"
+segmentos = ["controller", "controllers", "controlador", "controladores", "webservice", "rest"]
+sufijos = ["controller", "controllerrest", "controlador"]
+
+[[capas.reglas]]
+capa = "modelo"
+segmentos = ["model", "models", "modelo", "modelos", "domain", "dominio", "entity", "entities"]
+
+[generados]
+# Archivos que no cuentan como participación ni se mandan a la IA.
+patron = '''(^|/)(target|build|out|dist|node_modules|\.idea|\.vscode|\.mvn|\.gradle)/|\.(class|jar|war|ear|iml|log)$|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|mvnw|mvnw\.cmd|gradlew|gradlew\.bat)$'''
+
+[limites]
+# Caracteres de diff por integrante que se mandan a la IA. Se reparten entre los commits.
+diff_chars_por_integrante = 30000
+# Ventanas (en horas antes del tag) para medir cuánto se hizo sobre la hora.
+ventanas_horas = [24, 48]
+
+[gemini]
+# Se prueban en orden. Verificar en AI Studio que sigan disponibles en el tier gratuito.
+modelos = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+temperatura = 0.1
+max_output_tokens = 16384
+reintentos = 4
+espera_inicial_seg = 15
+timeout_seg = 180

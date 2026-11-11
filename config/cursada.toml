@@ -1,0 +1,22 @@
+# Datos de la cursada en curso. Actualizar al inicio de cada cuatrimestre.
+
+[cursada]
+anio = 2026
+# Carpeta dentro de la rama `reportes`: {anio}/{nombre}/{equipo}/{tag}.md
+nombre = "segunda-cursada"
+
+[equipos]
+# Repos de la org que se consideran de equipos. El grupo `equipo` da el nombre del equipo.
+patron_repo = '^(?P<equipo>.+)-TP$'
+
+# Logins de GitHub de los docentes. Solo los issues abiertos por ellos cuentan para la reentrega.
+# Si queda vacío se toman los issues con label de severidad de cualquier autor (el reporte lo avisa).
+docentes = []
+
+# Si es true y un equipo no figura en [equipos.integrantes], se buscan los integrantes
+# en el team de GitHub con el mismo nombre que el equipo (requiere Members: read en la App).
+roster_desde_teams = true
+
+[equipos.integrantes]
+# Roster explícito por equipo (tiene prioridad sobre los teams de GitHub).
+# mi-equipo = ["login-alumno-1", "login-alumno-2"]
